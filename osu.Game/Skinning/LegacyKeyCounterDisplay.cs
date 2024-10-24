@@ -10,13 +10,33 @@ using osu.Framework.Graphics.Sprites;
 using osu.Framework.Graphics.Textures;
 using osuTK;
 using osuTK.Graphics;
+using osu.Framework.Bindables;
+using osu.Game.Configuration;
+using osu.Game.Localisation;
 
 namespace osu.Game.Skinning
 {
     public partial class LegacyKeyCounterDisplay : KeyCounterDisplay
     {
-        private static readonly Colour4 active_colour_top = Colour4.FromHex(@"#ffde00");
-        private static readonly Colour4 active_colour_bottom = Colour4.FromHex(@"#f8009e");
+        [SettingSource(typeof(LegacyKeyCounterDisplayStrings), nameof(LegacyKeyCounterDisplayStrings.TopKeysPressColour), nameof(LegacyKeyCounterDisplayStrings.TopKeysPressColourDescription))]
+        public BindableColour4 KeyPressColourTop { get; set; } = new BindableColour4(Colour4.FromHex(@"#ffde00"));
+
+        [SettingSource(typeof(LegacyKeyCounterDisplayStrings), nameof(LegacyKeyCounterDisplayStrings.BottomKeysPressColour), nameof(LegacyKeyCounterDisplayStrings.BottomKeysPressColourDescription))]
+        public BindableColour4 KeyPressColourBottom { get; set; } = new BindableColour4(Colour4.FromHex(@"#f8009e"));
+
+        [SettingSource(typeof(LegacyKeyCounterDisplayStrings), nameof(LegacyKeyCounterDisplayStrings.Animation), nameof(LegacyKeyCounterDisplayStrings.AnimationDescription))]
+        public Bindable<KeyCounterAnimation> Animation { get; } = new Bindable<KeyCounterAnimation>(KeyCounterAnimation.Shrink);
+
+        [SettingSource(typeof(LegacyKeyCounterDisplayStrings), nameof(LegacyKeyCounterDisplayStrings.KeySpacing), nameof(LegacyKeyCounterDisplayStrings.KeySpacingDescription))]
+        public BindableFloat KeySpacing { get; set; } = new BindableFloat(1.8f)
+        {
+            MinValue = 0,
+            MaxValue = 100f,
+            Precision = 0.2f
+        };
+
+        [SettingSource(typeof(LegacyKeyCounterDisplayStrings), nameof(LegacyKeyCounterDisplayStrings.CentreKeys), nameof(LegacyKeyCounterDisplayStrings.CentreKeysDescription))]
+        public BindableBool CentreKeys { get; set; } = new BindableBool(false);
 
         protected override FillFlowContainer<KeyCounter> KeyFlow { get; }
 
@@ -37,11 +57,6 @@ namespace osu.Game.Skinning
                 },
                 KeyFlow = new FillFlowContainer<KeyCounter>
                 {
-                    Anchor = Anchor.TopRight,
-                    Origin = Anchor.TopRight,
-                    X = -1.5f,
-                    Y = 7,
-                    Spacing = new Vector2(1.8f),
                     Direction = FillDirection.Vertical,
                     AutoSizeAxes = Axes.Both,
                 },
@@ -62,10 +77,42 @@ namespace osu.Game.Skinning
             if (backgroundTexture != null)
                 backgroundSprite.Texture = backgroundTexture;
 
-            for (int i = 0; i < KeyFlow.Count; ++i)
+            Texture? mainKeyTexture = source.GetTexture(@"inputoverlay-key");
+
+            for (int i = 0; i < KeyFlow.Count; i++)
             {
-                ((LegacyKeyCounter)KeyFlow[i]).ActiveColour = i < 2 ? active_colour_top : active_colour_bottom;
+                Texture? keyTexture = source.GetTexture($"inputoverlay-key-{i}");
+
+                if (keyTexture == null && mainKeyTexture == null) continue;
+
+                ((LegacyKeyCounter)KeyFlow[i]).KeySprite.Texture = keyTexture ?? mainKeyTexture;
             }
+
+            for (int i = 0; i < KeyFlow.Count; ++i)
+                ((LegacyKeyCounter)KeyFlow[i]).Animation.BindTo(Animation);
+
+            KeyPressColourTop.BindValueChanged(colour =>
+            {
+                for (int i = 0; i < 2; ++i)
+                    ((LegacyKeyCounter)KeyFlow[i]).ActiveColour = colour.NewValue;
+            }, true);
+
+            KeyPressColourBottom.BindValueChanged(colour =>
+            {
+                for (int i = 2; i < KeyFlow.Count; ++i)
+                    ((LegacyKeyCounter)KeyFlow[i]).ActiveColour = colour.NewValue;
+            }, true);
+
+            KeySpacing.BindValueChanged(spacing => KeyFlow.Spacing = new Vector2(spacing.NewValue), true);
+
+            CentreKeys.BindValueChanged(centreKeys =>
+            {
+                Anchor keyFlowAnchor = centreKeys.NewValue ? Anchor.Centre : Anchor.TopRight;
+                KeyFlow.Anchor = keyFlowAnchor;
+                KeyFlow.Origin = keyFlowAnchor;
+
+                KeyFlow.Position = centreKeys.NewValue ? Vector2.Zero : new Vector2(-1.5f, 7);
+            }, true);
         }
 
         protected override KeyCounter CreateCounter(InputTrigger trigger) => new LegacyKeyCounter(trigger)

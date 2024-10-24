@@ -2,20 +2,24 @@
 // See the LICENCE file in the repository root for full licence text.
 
 using osu.Framework.Allocation;
+using osu.Framework.Bindables;
 using osu.Framework.Graphics;
 using osu.Framework.Graphics.Containers;
 using osu.Framework.Graphics.Sprites;
-using osu.Framework.Graphics.Textures;
+using osu.Framework.Localisation;
 using osu.Game.Graphics;
 using osu.Game.Graphics.Containers;
 using osu.Game.Graphics.Sprites;
 using osu.Game.Screens.Play.HUD;
+using osu.Game.Localisation;
 
 namespace osu.Game.Skinning
 {
     public partial class LegacyKeyCounter : KeyCounter
     {
         private const float transition_duration = 160;
+
+        public Bindable<KeyCounterAnimation> Animation { get; set; } = new Bindable<KeyCounterAnimation>();
 
         public Colour4 ActiveColour { get; set; }
 
@@ -33,7 +37,7 @@ namespace osu.Game.Skinning
 
         private readonly Container keyContainer;
         private readonly OsuSpriteText overlayKeyText;
-        private readonly Sprite keySprite;
+        public readonly Sprite KeySprite;
 
         public LegacyKeyCounter(InputTrigger trigger)
             : base(trigger)
@@ -47,7 +51,7 @@ namespace osu.Game.Skinning
                 Anchor = Anchor.Centre,
                 Children = new Drawable[]
                 {
-                    keySprite = new Sprite
+                    KeySprite = new Sprite
                     {
                         Anchor = Anchor.Centre,
                         Origin = Anchor.Centre,
@@ -76,17 +80,14 @@ namespace osu.Game.Skinning
         [BackgroundDependencyLoader]
         private void load(ISkinSource source)
         {
-            Texture? keyTexture = source.GetTexture(@"inputoverlay-key");
-
-            if (keyTexture != null)
-                keySprite.Texture = keyTexture;
+            Animation.BindValueChanged(_ => deactivateKeyContainer(keyContainer));
         }
 
         protected override void Activate(bool forwardPlayback = true)
         {
             base.Activate(forwardPlayback);
-            keyContainer.ScaleTo(0.75f, transition_duration, Easing.Out);
-            keySprite.Colour = ActiveColour;
+            activateKeyConainer(keyContainer, Animation.Value);
+            KeySprite.Colour = ActiveColour;
             overlayKeyText.Text = CountPresses.Value.ToString();
             overlayKeyText.Font = overlayKeyText.Font.With(weight: FontWeight.SemiBold);
         }
@@ -94,8 +95,65 @@ namespace osu.Game.Skinning
         protected override void Deactivate(bool forwardPlayback = true)
         {
             base.Deactivate(forwardPlayback);
-            keyContainer.ScaleTo(1f, transition_duration, Easing.Out);
-            keySprite.Colour = Colour4.White;
+            deactivateKeyContainer(keyContainer);
+            KeySprite.Colour = Colour4.White;
         }
+
+        private void deactivateKeyContainer(Container target)
+        {
+            keyContainer.MoveTo(osuTK.Vector2.Zero, transition_duration, Easing.Out);
+            keyContainer.ScaleTo(1f, transition_duration, Easing.Out);
+        }
+
+        private void activateKeyConainer(Container target, KeyCounterAnimation animation)
+        {
+            switch (animation)
+            {
+                case KeyCounterAnimation.Shrink:
+                    target.ScaleTo(0.75f, transition_duration, Easing.Out);
+                    return;
+
+                case KeyCounterAnimation.Expand:
+                    target.ScaleTo(1.25f, transition_duration, Easing.Out);
+                    return;
+
+                case KeyCounterAnimation.MoveUp:
+                    target.MoveToY(-20f, transition_duration, Easing.Out);
+                    return;
+
+                case KeyCounterAnimation.MoveRight:
+                    target.MoveToX(20f, transition_duration, Easing.Out);
+                    return;
+
+                case KeyCounterAnimation.MoveDown:
+                    target.MoveToY(20f, transition_duration, Easing.Out);
+                    return;
+
+                case KeyCounterAnimation.MoveLeft:
+                    target.MoveToX(-20f, transition_duration, Easing.Out);
+                    return;
+            }
+        }
+    }
+
+    public enum KeyCounterAnimation
+    {
+        [LocalisableDescription(typeof(LegacyKeyCounterStrings), nameof(LegacyKeyCounterStrings.Shrink))]
+        Shrink,
+
+        [LocalisableDescription(typeof(LegacyKeyCounterStrings), nameof(LegacyKeyCounterStrings.Expand))]
+        Expand,
+
+        [LocalisableDescription(typeof(LegacyKeyCounterStrings), nameof(LegacyKeyCounterStrings.MoveUp))]
+        MoveUp,
+
+        [LocalisableDescription(typeof(LegacyKeyCounterStrings), nameof(LegacyKeyCounterStrings.MoveRight))]
+        MoveRight,
+
+        [LocalisableDescription(typeof(LegacyKeyCounterStrings), nameof(LegacyKeyCounterStrings.MoveDown))]
+        MoveDown,
+
+        [LocalisableDescription(typeof(LegacyKeyCounterStrings), nameof(LegacyKeyCounterStrings.MoveLeft))]
+        MoveLeft,
     }
 }
