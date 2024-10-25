@@ -12,6 +12,7 @@ using osu.Game.Graphics.Containers;
 using osu.Game.Graphics.Sprites;
 using osu.Game.Screens.Play.HUD;
 using osu.Game.Localisation;
+using osuTK;
 
 namespace osu.Game.Skinning
 {
@@ -86,7 +87,7 @@ namespace osu.Game.Skinning
         protected override void Activate(bool forwardPlayback = true)
         {
             base.Activate(forwardPlayback);
-            activateKeyConainer(keyContainer, Animation.Value);
+            activateKeyContainer(keyContainer, Animation.Value);
             KeySprite.Colour = ActiveColour;
             overlayKeyText.Text = CountPresses.Value.ToString();
             overlayKeyText.Font = overlayKeyText.Font.With(weight: FontWeight.SemiBold);
@@ -101,14 +102,17 @@ namespace osu.Game.Skinning
 
         private void deactivateKeyContainer(Container target)
         {
-            keyContainer.MoveTo(osuTK.Vector2.Zero, transition_duration, Easing.Out);
+            keyContainer.MoveTo(Vector2.Zero, transition_duration, Easing.Out);
             keyContainer.ScaleTo(1f, transition_duration, Easing.Out);
         }
 
-        private void activateKeyConainer(Container target, KeyCounterAnimation animation)
+        private void activateKeyContainer(Container target, KeyCounterAnimation animation)
         {
             switch (animation)
             {
+                case KeyCounterAnimation.NoAnimation:
+                    return;
+
                 case KeyCounterAnimation.Shrink:
                     target.ScaleTo(0.75f, transition_duration, Easing.Out);
                     return;
@@ -138,6 +142,9 @@ namespace osu.Game.Skinning
 
     public enum KeyCounterAnimation
     {
+        [LocalisableDescription(typeof(LegacyKeyCounterStrings), nameof(LegacyKeyCounterStrings.NoAnimation))]
+        NoAnimation,
+
         [LocalisableDescription(typeof(LegacyKeyCounterStrings), nameof(LegacyKeyCounterStrings.Shrink))]
         Shrink,
 

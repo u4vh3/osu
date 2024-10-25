@@ -10,6 +10,11 @@ namespace osu.Game.Localisation
         private const string prefix = @"osu.Game.Resources.Localisation.LegacyKeyCounter";
 
         /// <summary>
+        /// "No animation"
+        /// </summary>
+        public static LocalisableString NoAnimation => new TranslatableString(getKey(@"no_animation"), @"No animation");
+
+        /// <summary>
         /// "Shrink"
         /// </summary>
         public static LocalisableString Shrink => new TranslatableString(getKey(@"shrink"), @"Shrink");
